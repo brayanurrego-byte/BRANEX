@@ -463,7 +463,6 @@ export default function PortafolioPage() {
           )}
         </div>
 
-
       {/* Add/Edit Modal */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/60 backdrop-blur-sm">
@@ -651,6 +650,6 @@ export default function PortafolioPage() {
           </div>
         </div>
       )}
-    </div>
+    </ProtectedRoute>
   )
 }

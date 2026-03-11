@@ -249,7 +249,6 @@ export default function WatchlistPage() {
           )}
         </div>
 
-
       {/* Add Modal */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
@@ -362,6 +361,6 @@ export default function WatchlistPage() {
           </div>
         </div>
       )}
-    </div>
+    </ProtectedRoute>
   )
 }
