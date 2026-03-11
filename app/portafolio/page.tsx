@@ -462,7 +462,7 @@ export default function PortafolioPage() {
             </div>
           )}
         </div>
-      </main>
+
 
       {/* Add/Edit Modal */}
       {showAddModal && (

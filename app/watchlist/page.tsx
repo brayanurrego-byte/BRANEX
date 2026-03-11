@@ -248,7 +248,7 @@ export default function WatchlistPage() {
             </div>
           )}
         </div>
-      </main>
+
 
       {/* Add Modal */}
       {showAddModal && (
