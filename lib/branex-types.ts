@@ -67,6 +67,7 @@ export interface Portfolio {
   snapshots: PortfolioSnapshot[]
   watchlist: WatchlistItem[]
   profile: UserProfile
+  passwordHash?: string | null
 }
 
 // Multi-portfolio storage structure

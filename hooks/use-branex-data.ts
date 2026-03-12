@@ -1,14 +1,23 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { parseDecimal } from '@/lib/utils'
-import type { 
-  Holding, 
-  Transaction, 
-  UserProfile, 
+import { isSupabaseConfigured } from '@/lib/supabase'
+import {
+  fetchPortfolios as fetchPortfoliosFromDB,
+  fetchPortfolioData,
+  savePortfolio as savePortfolioDB,
+  createPortfolioInDB,
+  deletePortfolioFromDB,
+  type PortfolioSummary,
+} from '@/lib/supabase-db'
+import type {
+  Holding,
+  Transaction,
+  UserProfile,
   Portfolio,
   BranexStorage,
-  PortfolioMetrics, 
+  PortfolioMetrics,
   HoldingWithMetrics,
   PortfolioSnapshot,
   WatchlistItem
@@ -47,8 +56,11 @@ function generateId(): string {
 export function useBranexData() {
   const [storage, setStorage] = useState<BranexStorage | null>(null)
   const [isLoaded, setIsLoaded] = useState(false)
+  const [cloudPortfolios, setCloudPortfolios] = useState<PortfolioSummary[]>([])
+  const [isSyncing, setIsSyncing] = useState(false)
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Load data from localStorage on mount
+  // Load data from localStorage on mount + fetch cloud portfolios
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY)
     if (stored) {
@@ -102,6 +114,22 @@ export function useBranexData() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(emptyStorage))
     }
     setIsLoaded(true)
+
+    // Fetch cloud portfolios
+    if (isSupabaseConfigured()) {
+      loadCloudPortfolios()
+    }
+  }, [])
+
+  // Load cloud portfolios list
+  const loadCloudPortfolios = useCallback(async () => {
+    if (!isSupabaseConfigured()) return
+    try {
+      const portfolios = await fetchPortfoliosFromDB()
+      setCloudPortfolios(portfolios)
+    } catch (error) {
+      console.error('Error loading cloud portfolios:', error)
+    }
   }, [])
 
   // Save data to localStorage whenever it changes
@@ -110,6 +138,28 @@ export function useBranexData() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(storage))
     }
   }, [storage, isLoaded])
+
+  // Debounced sync to Supabase when active portfolio changes
+  useEffect(() => {
+    if (!storage || !isLoaded || !isSupabaseConfigured()) return
+
+    const activeP = storage.portfolios.find(p => p.id === storage.activePortfolioId)
+    if (!activeP) return
+
+    // Debounce: save to Supabase 2 seconds after last change
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+    saveTimerRef.current = setTimeout(async () => {
+      setIsSyncing(true)
+      await savePortfolioDB(activeP, activeP.passwordHash)
+      // Refresh cloud list after saving
+      await loadCloudPortfolios()
+      setIsSyncing(false)
+    }, 2000)
+
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+    }
+  }, [storage, isLoaded, loadCloudPortfolios])
 
   // Get active portfolio
   const activePortfolio = useMemo(() => {
@@ -120,19 +170,19 @@ export function useBranexData() {
   // Holdings with calculated metrics
   const holdingsWithMetrics: HoldingWithMetrics[] = useMemo(() => {
     if (!activePortfolio?.holdings || activePortfolio.holdings.length === 0) return []
-    
+
     const totalPortfolioValue = activePortfolio.holdings.reduce(
       (sum, h) => sum + h.currentPrice * h.quantity,
       0
     )
-    
+
     return activePortfolio.holdings.map(h => {
       const marketValue = h.currentPrice * h.quantity
       const totalInvested = h.avgCost * h.quantity
       const totalPnL = marketValue - totalInvested
       const pnlPercent = totalInvested > 0 ? (totalPnL / totalInvested) * 100 : 0
       const weight = totalPortfolioValue > 0 ? (marketValue / totalPortfolioValue) * 100 : 0
-      
+
       return {
         ...h,
         marketValue,
@@ -168,7 +218,7 @@ export function useBranexData() {
     holdingsWithMetrics.forEach(h => {
       sectorMap[h.sector] = (sectorMap[h.sector] || 0) + h.marketValue
     })
-    
+
     const sectorAllocation = Object.entries(sectorMap).map(([name, value]) => ({
       name,
       value: Math.round((value / totalValue) * 100),
@@ -176,14 +226,12 @@ export function useBranexData() {
     }))
 
     // Diversification Score based on Herfindahl-Hirschman Index (HHI)
-    // HHI = sum of squared weights. Lower HHI = more diversified.
-    // We normalize to 0-100 where 100 = perfectly diversified across sectors.
     const n = sectorAllocation.length
     let diversificationScore = 0
     if (n > 1) {
       const hhi = sectorAllocation.reduce((sum, s) => sum + Math.pow(s.value / 100, 2), 0)
-      const minHHI = 1 / n // perfect distribution
-      const maxHHI = 1     // single sector
+      const minHHI = 1 / n
+      const maxHHI = 1
       diversificationScore = Math.round(((maxHHI - hhi) / (maxHHI - minHHI)) * 100)
       diversificationScore = Math.max(0, Math.min(100, diversificationScore))
     }
@@ -205,15 +253,15 @@ export function useBranexData() {
       if (!prev || !prev.activePortfolioId) return prev
       return {
         ...prev,
-        portfolios: prev.portfolios.map(p => 
+        portfolios: prev.portfolios.map(p =>
           p.id === prev.activePortfolioId ? updater(p) : p
         ),
       }
     })
   }, [])
 
-  // Create a new portfolio
-  const createPortfolio = useCallback((name: string) => {
+  // Create a new portfolio (with optional password hash)
+  const createPortfolio = useCallback((name: string, passwordHash?: string | null) => {
     const newPortfolio: Portfolio = {
       id: generateId(),
       name,
@@ -223,6 +271,7 @@ export function useBranexData() {
       snapshots: [],
       watchlist: [],
       profile: { ...DEFAULT_PROFILE },
+      passwordHash: passwordHash || null,
     }
     setStorage(prev => {
       if (!prev) return { activePortfolioId: newPortfolio.id, portfolios: [newPortfolio] }
@@ -231,16 +280,49 @@ export function useBranexData() {
         portfolios: [...prev.portfolios, newPortfolio],
       }
     })
-    return newPortfolio.id
-  }, [])
 
-  // Select a portfolio
-  const selectPortfolio = useCallback((id: string) => {
-    setStorage(prev => {
-      if (!prev) return prev
-      return { ...prev, activePortfolioId: id }
-    })
-  }, [])
+    // Save to Supabase immediately
+    if (isSupabaseConfigured()) {
+      createPortfolioInDB(newPortfolio, passwordHash || null).then(() => {
+        loadCloudPortfolios()
+      })
+    }
+
+    return newPortfolio.id
+  }, [loadCloudPortfolios])
+
+  // Select a portfolio (load from Supabase if not in local storage)
+  const selectPortfolio = useCallback(async (id: string) => {
+    // Check if we have it locally
+    const localPortfolio = storage?.portfolios.find(p => p.id === id)
+
+    if (localPortfolio) {
+      setStorage(prev => {
+        if (!prev) return prev
+        return { ...prev, activePortfolioId: id }
+      })
+      return
+    }
+
+    // Load from Supabase
+    if (isSupabaseConfigured()) {
+      const portfolioData = await fetchPortfolioData(id)
+      if (portfolioData) {
+        setStorage(prev => {
+          if (!prev) return { activePortfolioId: id, portfolios: [portfolioData] }
+          // Add to local storage if not already there
+          const exists = prev.portfolios.find(p => p.id === id)
+          if (exists) {
+            return { ...prev, activePortfolioId: id }
+          }
+          return {
+            activePortfolioId: id,
+            portfolios: [...prev.portfolios, portfolioData],
+          }
+        })
+      }
+    }
+  }, [storage?.portfolios])
 
   // Exit portfolio (go back to selection screen)
   const exitPortfolio = useCallback(() => {
@@ -248,7 +330,11 @@ export function useBranexData() {
       if (!prev) return prev
       return { ...prev, activePortfolioId: null }
     })
-  }, [])
+    // Refresh cloud list when going back to selection
+    if (isSupabaseConfigured()) {
+      loadCloudPortfolios()
+    }
+  }, [loadCloudPortfolios])
 
   // Delete a portfolio
   const deletePortfolio = useCallback((id: string) => {
@@ -260,7 +346,14 @@ export function useBranexData() {
         portfolios: newPortfolios,
       }
     })
-  }, [])
+
+    // Delete from Supabase
+    if (isSupabaseConfigured()) {
+      deletePortfolioFromDB(id).then(() => {
+        loadCloudPortfolios()
+      })
+    }
+  }, [loadCloudPortfolios])
 
   // Update portfolio metadata (name, etc)
   const updatePortfolioMeta = useCallback((updates: Partial<Pick<Portfolio, 'name'>>) => {
@@ -303,7 +396,7 @@ export function useBranexData() {
   const updateHoldingPrice = useCallback((id: string, newPrice: number) => {
     updateActivePortfolio(p => ({
       ...p,
-      holdings: p.holdings.map(h => 
+      holdings: p.holdings.map(h =>
         h.id === id ? { ...h, currentPrice: newPrice } : h
       ),
     }))
@@ -327,7 +420,6 @@ export function useBranexData() {
 
       let updatedHoldings = [...p.holdings]
 
-      // If it's a BUY, update or create holding
       if (transaction.type === 'COMPRA') {
         const existingIndex = updatedHoldings.findIndex(
           h => h.symbol === transaction.symbol
@@ -342,7 +434,6 @@ export function useBranexData() {
             avgCost: totalCost / totalShares,
           }
         } else {
-          // Create new holding
           updatedHoldings.push({
             id: generateId(),
             name: transaction.assetName,
@@ -357,7 +448,6 @@ export function useBranexData() {
         }
       }
 
-      // If it's a SELL, reduce holding quantity
       if (transaction.type === 'VENTA') {
         const existingIndex = updatedHoldings.findIndex(
           h => h.symbol === transaction.symbol
@@ -376,11 +466,6 @@ export function useBranexData() {
         }
       }
 
-      // DIVIDENDO: Record only — does not change holdings.
-      // The total field stores the cash received.
-
-      // SPLIT: Multiply quantity by split ratio, divide cost basis accordingly.
-      // shares field = split ratio (e.g., 2 for a 2-for-1 split)
       if (transaction.type === 'SPLIT') {
         const existingIndex = updatedHoldings.findIndex(
           h => h.symbol === transaction.symbol
@@ -396,12 +481,11 @@ export function useBranexData() {
         }
       }
 
-      // Update snapshots
       const newSnapshots = [...p.snapshots]
       const totalValue = updatedHoldings.reduce((sum, h) => sum + h.currentPrice * h.quantity, 0)
       const totalInvested = updatedHoldings.reduce((sum, h) => sum + h.avgCost * h.quantity, 0)
       const today = new Date().toISOString().split('T')[0]
-      
+
       const existingSnapshotIndex = newSnapshots.findIndex(s => s.date === today)
       if (existingSnapshotIndex >= 0) {
         newSnapshots[existingSnapshotIndex] = { date: today, value: totalValue, invested: totalInvested }
@@ -424,7 +508,7 @@ export function useBranexData() {
   const updateTransaction = useCallback((id: string, updates: Partial<Omit<Transaction, 'id'>>) => {
     updateActivePortfolio(p => ({
       ...p,
-      transactions: p.transactions.map(t => 
+      transactions: p.transactions.map(t =>
         t.id === id ? { ...t, ...updates } : t
       ),
     }))
@@ -446,17 +530,17 @@ export function useBranexData() {
     }))
   }, [updateActivePortfolio])
 
-  // Export data to CSV (RFC 4180 compliant — quotes fields containing commas)
+  // Export data to CSV
   const exportToCSV = useCallback(() => {
     if (!activePortfolio) return ''
-    
+
     const escapeCSV = (field: string): string => {
       if (field.includes(',') || field.includes('"') || field.includes('\n')) {
         return `"${field.replace(/"/g, '""')}"`
       }
       return field
     }
-    
+
     const headers = ['Fecha', 'Tipo', 'Activo', 'Símbolo', 'Acciones', 'Precio', 'Total', 'Notas']
     const rows = activePortfolio.transactions.map(t => [
       t.date,
@@ -468,14 +552,13 @@ export function useBranexData() {
       t.total.toString(),
       escapeCSV(t.notes || ''),
     ])
-    
+
     const csvContent = [headers.join(','), ...rows.map(row => row.join(','))].join('\n')
     return csvContent
   }, [activePortfolio])
 
-  // Import data from CSV (handles quoted fields)
+  // Import data from CSV
   const importFromCSV = useCallback((csvContent: string) => {
-    // Parse CSV line respecting quoted fields
     const parseCSVLine = (line: string): string[] => {
       const result: string[] = []
       let current = ''
@@ -485,7 +568,7 @@ export function useBranexData() {
         if (inQuotes) {
           if (char === '"' && line[i + 1] === '"') {
             current += '"'
-            i++ // skip escaped quote
+            i++
           } else if (char === '"') {
             inQuotes = false
           } else {
@@ -505,10 +588,10 @@ export function useBranexData() {
       result.push(current)
       return result
     }
-    
+
     const lines = csvContent.split('\n').filter(line => line.trim())
     if (lines.length < 2) return
-    
+
     const transactions: Transaction[] = []
     for (let i = 1; i < lines.length; i++) {
       const cols = parseCSVLine(lines[i])
@@ -526,7 +609,7 @@ export function useBranexData() {
         })
       }
     }
-    
+
     updateActivePortfolio(p => ({
       ...p,
       transactions: [...transactions, ...p.transactions].sort(
@@ -535,44 +618,44 @@ export function useBranexData() {
     }))
   }, [updateActivePortfolio])
 
-  // Save a weekly snapshot of the current portfolio state
+  // Save a weekly snapshot
   const saveWeeklySnapshot = useCallback(() => {
     let savedDate = ''
     updateActivePortfolio(p => {
       if (p.holdings.length === 0) return p
-      
+
       const totalValue = p.holdings.reduce((sum, h) => sum + h.currentPrice * h.quantity, 0)
       const totalInvested = p.holdings.reduce((sum, h) => sum + h.avgCost * h.quantity, 0)
       const today = new Date().toISOString().split('T')[0]
-      
+
       savedDate = new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })
-      
+
       const newSnapshot: PortfolioSnapshot = {
         date: today,
         value: totalValue,
         invested: totalInvested,
       }
-      
+
       const existingIndex = p.snapshots.findIndex(s => s.date === today)
       let newSnapshots: PortfolioSnapshot[]
-      
+
       if (existingIndex >= 0) {
         newSnapshots = [...p.snapshots]
         newSnapshots[existingIndex] = newSnapshot
       } else {
         newSnapshots = [...p.snapshots, newSnapshot]
       }
-      
+
       newSnapshots = newSnapshots
         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
         .slice(-52)
-      
+
       return {
         ...p,
         snapshots: newSnapshots,
       }
     })
-    
+
     return savedDate || new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })
   }, [updateActivePortfolio])
 
@@ -620,7 +703,12 @@ export function useBranexData() {
     activePortfolioId: storage?.activePortfolioId || null,
     activePortfolio,
     hasActivePortfolio: !!activePortfolio,
-    
+
+    // Cloud portfolios
+    cloudPortfolios,
+    loadCloudPortfolios,
+    isSyncing,
+
     // Data from active portfolio
     holdings: activePortfolio?.holdings || [],
     holdingsWithMetrics,
@@ -630,14 +718,14 @@ export function useBranexData() {
     watchlist: activePortfolio?.watchlist || [],
     metrics,
     isLoaded,
-    
+
     // Portfolio management actions
     createPortfolio,
     selectPortfolio,
     exitPortfolio,
     deletePortfolio,
     updatePortfolioMeta,
-    
+
     // Portfolio data actions
     addHolding,
     updateHolding,
