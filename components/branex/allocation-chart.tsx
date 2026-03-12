@@ -5,18 +5,12 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Sector } from 'recharts'
 import { useBranex } from './branex-provider'
 import { formatPercent } from '@/lib/utils'
 
-const renderActiveShape = (props: {
-  cx: number
-  cy: number
-  innerRadius: number
-  outerRadius: number
-  startAngle: number
-  endAngle: number
-  fill: string
-  payload: { name: string; value: number }
-}) => {
-  const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill, payload } = props
-
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const renderActiveShape = (props: any) => {
+  const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill, payload } = props as {
+    cx: number; cy: number; innerRadius: number; outerRadius: number;
+    startAngle: number; endAngle: number; fill: string; payload: { name: string; value: number }
+  }
   return (
     <g>
       <Sector
