@@ -182,7 +182,7 @@ export default function NoticiasPage() {
           )}
 
           {/* Loading State */}
-          {loading && apiKey && (
+          {loading && finnhubKey && (
             <div className="space-y-4">
               {[1, 2, 3, 4, 5].map((i) => (
                 <div key={i} className="glass-card p-5 animate-pulse">
@@ -200,7 +200,7 @@ export default function NoticiasPage() {
           )}
 
           {/* News Feed */}
-          {!loading && apiKey && news.length > 0 && (
+          {!loading && finnhubKey && news.length > 0 && (
             <div className="space-y-4">
               {news.map((item, i) => (
                 <a
@@ -255,7 +255,7 @@ export default function NoticiasPage() {
           )}
 
           {/* Empty State (API key but no news) */}
-          {!loading && apiKey && news.length === 0 && !error && (
+          {!loading && finnhubKey && news.length === 0 && !error && (
             <div className="glass-card p-12 text-center animate-fade-slide-up">
               <div className="w-16 h-16 rounded-full bg-[rgba(0,163,255,0.1)] flex items-center justify-center mx-auto mb-4">
                 <Newspaper className="w-8 h-8 text-[#00A3FF]" />
