@@ -1,11 +1,12 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { Clock, ExternalLink, AlertCircle, Settings, RefreshCw, Newspaper } from 'lucide-react'
+import { Clock, ExternalLink, AlertCircle, RefreshCw, Newspaper } from 'lucide-react'
 import { ProtectedRoute } from '@/components/branex/protected-route'
 import { useBranex } from '@/components/branex/branex-provider'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { getFinnhubApiKey } from '@/lib/finnhub'
 
 interface NewsItem {
   id: number
@@ -35,47 +36,12 @@ const formatTimeAgo = (timestamp: number): string => {
   }
 }
 
-// Empty state when no API key
-function NoApiKeyState() {
-  return (
-    <div className="glass-card p-12 text-center animate-fade-slide-up">
-      <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-[#FFB800]/20 to-[#FF8C00]/20 border border-[#FFB800]/30 mb-6">
-        <Newspaper className="w-10 h-10 text-[#FFB800]" />
-      </div>
-      <h2 className="text-2xl font-bold font-[family-name:var(--font-space-grotesk)] text-white mb-3">
-        Configura tu API Key de Finnhub
-      </h2>
-      <p className="text-[#8892b0] max-w-md mx-auto mb-8">
-        Para ver noticias financieras en tiempo real, necesitas configurar tu API key gratuita de Finnhub en la seccion de Configuracion.
-      </p>
-      <div className="flex items-center justify-center gap-4">
-        <a
-          href="https://finnhub.io/register"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 px-6 py-3 bg-[rgba(255,184,0,0.1)] border border-[#FFB800]/30 text-[#FFB800] rounded-lg font-medium hover:bg-[rgba(255,184,0,0.2)] transition-colors"
-        >
-          Obtener clave gratuita
-          <ExternalLink className="w-4 h-4" />
-        </a>
-        <a
-          href="/configuracion"
-          className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#00A3FF] to-[#0066FF] hover:opacity-90 text-white rounded-lg font-medium transition-opacity"
-        >
-          <Settings className="w-4 h-4" />
-          Ir a Configuracion
-        </a>
-      </div>
-    </div>
-  )
-}
-
 export default function NoticiasPage() {
   const { profile } = useBranex()
   const [news, setNews] = useState<NewsItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const finnhubKey = profile.finnhubApiKey || ''
+  const finnhubKey = getFinnhubApiKey(profile.finnhubApiKey)
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null)
 
   // Fetch news from Finnhub
@@ -147,29 +113,24 @@ export default function NoticiasPage() {
                 Ultimas noticias del mercado financiero en tiempo real.
               </p>
             </div>
-            {finnhubKey && (
-              <div className="flex items-center gap-3 animate-fade-slide-up" style={{ animationDelay: '100ms' }}>
-                {lastUpdate && (
-                  <span className="text-xs text-[#8892b0] flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    Actualizado: {lastUpdate.toLocaleTimeString('es-ES')}
-                  </span>
-                )}
-                <Button
-                  onClick={handleRefresh}
-                  disabled={loading}
-                  variant="outline"
-                  className="border-[rgba(0,163,255,0.3)] text-[#00A3FF] hover:bg-[rgba(0,163,255,0.1)]"
-                >
-                  <RefreshCw className={cn("w-4 h-4 mr-2", loading && "animate-spin")} />
-                  Actualizar
-                </Button>
-              </div>
-            )}
+            <div className="flex items-center gap-3 animate-fade-slide-up" style={{ animationDelay: '100ms' }}>
+              {lastUpdate && (
+                <span className="text-xs text-[#8892b0] flex items-center gap-1">
+                  <Clock className="w-3 h-3" />
+                  Actualizado: {lastUpdate.toLocaleTimeString('es-ES')}
+                </span>
+              )}
+              <Button
+                onClick={handleRefresh}
+                disabled={loading}
+                variant="outline"
+                className="border-[rgba(0,163,255,0.3)] text-[#00A3FF] hover:bg-[rgba(0,163,255,0.1)]"
+              >
+                <RefreshCw className={cn("w-4 h-4 mr-2", loading && "animate-spin")} />
+                Actualizar
+              </Button>
+            </div>
           </div>
-
-          {/* No API Key State */}
-          {!finnhubKey && !loading && <NoApiKeyState />}
 
           {/* Error State */}
           {error && (
@@ -182,7 +143,7 @@ export default function NoticiasPage() {
           )}
 
           {/* Loading State */}
-          {loading && finnhubKey && (
+          {loading && (
             <div className="space-y-4">
               {[1, 2, 3, 4, 5].map((i) => (
                 <div key={i} className="glass-card p-5 animate-pulse">
@@ -200,7 +161,7 @@ export default function NoticiasPage() {
           )}
 
           {/* News Feed */}
-          {!loading && finnhubKey && news.length > 0 && (
+          {!loading && news.length > 0 && (
             <div className="space-y-4">
               {news.map((item, i) => (
                 <a
@@ -255,7 +216,7 @@ export default function NoticiasPage() {
           )}
 
           {/* Empty State (API key but no news) */}
-          {!loading && finnhubKey && news.length === 0 && !error && (
+          {!loading && news.length === 0 && !error && (
             <div className="glass-card p-12 text-center animate-fade-slide-up">
               <div className="w-16 h-16 rounded-full bg-[rgba(0,163,255,0.1)] flex items-center justify-center mx-auto mb-4">
                 <Newspaper className="w-8 h-8 text-[#00A3FF]" />

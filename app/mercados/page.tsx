@@ -1,11 +1,12 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { TrendingUp, TrendingDown, AlertCircle, Settings, RefreshCw, Clock, Bitcoin, Coins } from 'lucide-react'
+import { TrendingUp, TrendingDown, RefreshCw, Clock, Bitcoin, Coins } from 'lucide-react'
 import { ProtectedRoute } from '@/components/branex/protected-route'
 import { useBranex } from '@/components/branex/branex-provider'
 import { Button } from '@/components/ui/button'
 import { cn, formatNumber, formatCurrency } from '@/lib/utils'
+import { getFinnhubApiKey } from '@/lib/finnhub'
 
 interface CryptoPrice {
   id: string
@@ -28,7 +29,7 @@ export default function MercadosPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null)
-  const finnhubKey = profile.finnhubApiKey || ''
+  const finnhubKey = getFinnhubApiKey(profile.finnhubApiKey)
 
   // Fetch crypto prices from CoinGecko (free, no API key needed)
   const fetchCryptoPrices = async () => {
@@ -151,38 +152,6 @@ export default function MercadosPage() {
               </Button>
             </div>
           </div>
-
-          {/* API Key Warning Banner */}
-          {!finnhubKey && (
-            <div className="glass-card p-4 mb-6 border-[rgba(255,184,0,0.3)] bg-[rgba(255,184,0,0.05)] animate-fade-slide-up">
-              <div className="flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-[#FFB800] flex-shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <h3 className="font-medium text-white mb-1">Configura tu API Key de Finnhub</h3>
-                  <p className="text-sm text-[#8892b0] mb-3">
-                    Para ver el estado del mercado en tiempo real, necesitas configurar tu API key gratuita de Finnhub.
-                  </p>
-                  <div className="flex items-center gap-3">
-                    <a
-                      href="https://finnhub.io/register"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-[#00A3FF] hover:underline"
-                    >
-                      Obtener clave gratuita
-                    </a>
-                    <a
-                      href="/configuracion"
-                      className="inline-flex items-center gap-1 text-sm text-[#FFB800] hover:underline"
-                    >
-                      <Settings className="w-3 h-3" />
-                      Ir a Configuracion
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Market Status */}
           {marketStatus && (
