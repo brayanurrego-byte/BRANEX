@@ -40,8 +40,8 @@ export default function WatchlistPage() {
     symbol: '',
     name: '',
     sector: 'Tecnología',
-    price: 0,
-    change: 0,
+    price: '',
+    change: '',
     volume: '',
     marketCap: '',
   })
@@ -78,8 +78,8 @@ export default function WatchlistPage() {
       symbol: formData.symbol.toUpperCase(),
       name: formData.name,
       sector: formData.sector,
-      price: formData.price || 0,
-      change: formData.change || 0,
+      price: parseDecimal(formData.price) || 0,
+      change: parseDecimal(formData.change) || 0,
       volume: formData.volume || '—',
       marketCap: formData.marketCap || '—',
       alert: false,
@@ -90,8 +90,8 @@ export default function WatchlistPage() {
       symbol: '',
       name: '',
       sector: 'Tecnología',
-      price: 0,
-      change: 0,
+      price: '',
+      change: '',
       volume: '',
       marketCap: '',
     })
@@ -301,10 +301,10 @@ export default function WatchlistPage() {
               <div>
                 <label className="block text-sm text-[#8892b0] mb-2">Precio Actual</label>
                 <input
-                  type="number"
-                  step="0.01"
-                  value={formData.price || ''}
-                  onChange={(e) => setFormData({ ...formData, price: parseDecimal(e.target.value) })}
+                  type="text"
+                  inputMode="decimal"
+                  value={formData.price}
+                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                   placeholder="150.00"
                   className="w-full h-10 px-3 bg-[rgba(255,255,255,0.03)] border border-[rgba(0,163,255,0.15)] rounded-lg text-white placeholder:text-[#8892b0] focus:outline-none focus:border-[#00A3FF]"
                 />
@@ -312,10 +312,10 @@ export default function WatchlistPage() {
               <div>
                 <label className="block text-sm text-[#8892b0] mb-2">Cambio %</label>
                 <input
-                  type="number"
-                  step="0.01"
-                  value={formData.change || ''}
-                  onChange={(e) => setFormData({ ...formData, change: parseDecimal(e.target.value) })}
+                  type="text"
+                  inputMode="decimal"
+                  value={formData.change}
+                  onChange={(e) => setFormData({ ...formData, change: e.target.value })}
                   placeholder="2.5"
                   className="w-full h-10 px-3 bg-[rgba(255,255,255,0.03)] border border-[rgba(0,163,255,0.15)] rounded-lg text-white placeholder:text-[#8892b0] focus:outline-none focus:border-[#00A3FF]"
                 />

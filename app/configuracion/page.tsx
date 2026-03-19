@@ -26,7 +26,12 @@ export default function ConfiguracionPage() {
   }
 
   const handleSaveProfile = () => {
-    updateProfile(localProfile)
+    updateProfile({
+      ...localProfile,
+      initialCapital: typeof localProfile.initialCapital === 'string'
+        ? parseDecimal(localProfile.initialCapital)
+        : localProfile.initialCapital,
+    })
     setHasChanges(false)
   }
 
@@ -180,9 +185,10 @@ export default function ConfiguracionPage() {
                   Capital Inicial Invertido
                 </label>
                 <input
-                  type="number"
-                  value={localProfile.initialCapital}
-                  onChange={(e) => handleProfileChange('initialCapital', parseDecimal(e.target.value))}
+                  type="text"
+                  inputMode="decimal"
+                  value={localProfile.initialCapital || ''}
+                  onChange={(e) => handleProfileChange('initialCapital', e.target.value)}
                   className="w-full h-10 px-3 bg-[rgba(255,255,255,0.03)] border border-[rgba(0,163,255,0.15)] rounded-lg text-white focus:outline-none focus:border-[#00A3FF]"
                 />
               </div>

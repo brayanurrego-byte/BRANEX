@@ -26,9 +26,9 @@ interface HoldingFormData {
   name: string
   symbol: string
   sector: string
-  quantity: number
-  avgCost: number
-  currentPrice: number
+  quantity: string
+  avgCost: string
+  currentPrice: string
   entryDate: string
   notes: string
 }
@@ -37,9 +37,9 @@ const emptyForm: HoldingFormData = {
   name: '',
   symbol: '',
   sector: 'Tecnología',
-  quantity: 0,
-  avgCost: 0,
-  currentPrice: 0,
+  quantity: '',
+  avgCost: '',
+  currentPrice: '',
   entryDate: new Date().toISOString().split('T')[0],
   notes: '',
 }
@@ -96,9 +96,9 @@ export default function PortafolioPage() {
       name: holding.name,
       symbol: holding.symbol,
       sector: holding.sector,
-      quantity: holding.quantity,
-      avgCost: holding.avgCost,
-      currentPrice: holding.currentPrice,
+      quantity: String(holding.quantity),
+      avgCost: String(holding.avgCost),
+      currentPrice: String(holding.currentPrice),
       entryDate: holding.entryDate,
       notes: holding.notes || '',
     })
@@ -109,14 +109,20 @@ export default function PortafolioPage() {
   const handleSave = () => {
     if (!formData.name || !formData.symbol) return
 
+    const quantity = parseDecimal(formData.quantity)
+    const avgCost = parseDecimal(formData.avgCost)
+    const currentPrice = parseDecimal(formData.currentPrice)
+
+    if (!quantity || !avgCost || !currentPrice) return
+
     if (editingId) {
       updateHolding(editingId, {
         name: formData.name,
         symbol: formData.symbol.toUpperCase(),
         sector: formData.sector,
-        quantity: formData.quantity,
-        avgCost: formData.avgCost,
-        currentPrice: formData.currentPrice,
+        quantity,
+        avgCost,
+        currentPrice,
         entryDate: formData.entryDate,
         notes: formData.notes,
       })
@@ -125,9 +131,9 @@ export default function PortafolioPage() {
         name: formData.name,
         symbol: formData.symbol.toUpperCase(),
         sector: formData.sector,
-        quantity: formData.quantity,
-        avgCost: formData.avgCost,
-        currentPrice: formData.currentPrice,
+        quantity,
+        avgCost,
+        currentPrice,
         entryDate: formData.entryDate,
         notes: formData.notes,
       })
@@ -517,21 +523,21 @@ export default function PortafolioPage() {
               <div>
                 <label className="block text-sm text-[#8892b0] mb-2">Cantidad de Acciones *</label>
                 <input
-                  type="number"
-                  step="any"
-                  value={formData.quantity || ''}
-                  onChange={(e) => setFormData({ ...formData, quantity: parseDecimal(e.target.value) })}
-                  placeholder="0.223"
+                  type="text"
+                  inputMode="decimal"
+                  value={formData.quantity}
+                  onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+                  placeholder="0.012"
                   className="w-full h-10 px-3 bg-[rgba(255,255,255,0.03)] border border-[rgba(0,163,255,0.15)] rounded-lg text-white placeholder:text-[#8892b0] focus:outline-none focus:border-[#00A3FF]"
                 />
               </div>
               <div>
                 <label className="block text-sm text-[#8892b0] mb-2">Precio Promedio de Compra *</label>
                 <input
-                  type="number"
-                  step="0.01"
-                  value={formData.avgCost || ''}
-                  onChange={(e) => setFormData({ ...formData, avgCost: parseDecimal(e.target.value) })}
+                  type="text"
+                  inputMode="decimal"
+                  value={formData.avgCost}
+                  onChange={(e) => setFormData({ ...formData, avgCost: e.target.value })}
                   placeholder="150.00"
                   className="w-full h-10 px-3 bg-[rgba(255,255,255,0.03)] border border-[rgba(0,163,255,0.15)] rounded-lg text-white placeholder:text-[#8892b0] focus:outline-none focus:border-[#00A3FF]"
                 />
@@ -539,10 +545,10 @@ export default function PortafolioPage() {
               <div>
                 <label className="block text-sm text-[#8892b0] mb-2">Precio Actual *</label>
                 <input
-                  type="number"
-                  step="0.01"
-                  value={formData.currentPrice || ''}
-                  onChange={(e) => setFormData({ ...formData, currentPrice: parseDecimal(e.target.value) })}
+                  type="text"
+                  inputMode="decimal"
+                  value={formData.currentPrice}
+                  onChange={(e) => setFormData({ ...formData, currentPrice: e.target.value })}
                   placeholder="175.50"
                   className="w-full h-10 px-3 bg-[rgba(255,255,255,0.03)] border border-[rgba(0,163,255,0.15)] rounded-lg text-white placeholder:text-[#8892b0] focus:outline-none focus:border-[#00A3FF]"
                 />
@@ -569,40 +575,42 @@ export default function PortafolioPage() {
             </div>
 
             {/* Live Preview */}
-            {formData.quantity > 0 && formData.avgCost > 0 && formData.currentPrice > 0 && (
-              <div className="glass-card p-3 md:p-4 mb-4 md:mb-6 bg-[rgba(0,163,255,0.05)]">
-                <p className="text-xs md:text-sm text-[#8892b0] mb-2">Vista previa:</p>
-                <div className="grid grid-cols-3 gap-2 md:gap-4">
-                  <div>
-                    <p className="text-[10px] md:text-xs text-[#8892b0]">Inversion</p>
-                    <p className="text-sm md:text-lg font-mono font-semibold text-white">
-                      ${formatCurrency(formData.quantity * formData.avgCost)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] md:text-xs text-[#8892b0]">Valor Actual</p>
-                    <p className="text-sm md:text-lg font-mono font-semibold text-white">
-                      ${formatCurrency(formData.quantity * formData.currentPrice)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] md:text-xs text-[#8892b0]">P&L</p>
-                    {(() => {
-                      const pnl = (formData.currentPrice - formData.avgCost) * formData.quantity
-                      const pnlPercent = ((formData.currentPrice - formData.avgCost) / formData.avgCost) * 100
-                      return (
-                        <p className={cn(
-                          "text-sm md:text-lg font-mono font-semibold",
-                          pnl >= 0 ? "text-[#00FF88]" : "text-[#FF3366]"
-                        )}>
-                          {pnlPercent >= 0 ? '+' : ''}{pnlPercent.toFixed(1)}%
-                        </p>
-                      )
-                    })()}
+            {(() => {
+              const qty = parseDecimal(formData.quantity)
+              const avg = parseDecimal(formData.avgCost)
+              const cur = parseDecimal(formData.currentPrice)
+              if (qty <= 0 || avg <= 0 || cur <= 0) return null
+              const pnl = (cur - avg) * qty
+              const pnlPercent = ((cur - avg) / avg) * 100
+              return (
+                <div className="glass-card p-3 md:p-4 mb-4 md:mb-6 bg-[rgba(0,163,255,0.05)]">
+                  <p className="text-xs md:text-sm text-[#8892b0] mb-2">Vista previa:</p>
+                  <div className="grid grid-cols-3 gap-2 md:gap-4">
+                    <div>
+                      <p className="text-[10px] md:text-xs text-[#8892b0]">Inversion</p>
+                      <p className="text-sm md:text-lg font-mono font-semibold text-white">
+                        ${formatCurrency(qty * avg)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] md:text-xs text-[#8892b0]">Valor Actual</p>
+                      <p className="text-sm md:text-lg font-mono font-semibold text-white">
+                        ${formatCurrency(qty * cur)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] md:text-xs text-[#8892b0]">P&L</p>
+                      <p className={cn(
+                        "text-sm md:text-lg font-mono font-semibold",
+                        pnl >= 0 ? "text-[#00FF88]" : "text-[#FF3366]"
+                      )}>
+                        {pnlPercent >= 0 ? '+' : ''}{pnlPercent.toFixed(1)}%
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )
+            })()}
 
             <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3">
               <Button
@@ -614,7 +622,7 @@ export default function PortafolioPage() {
               </Button>
               <Button
                 onClick={handleSave}
-                disabled={!formData.name || !formData.symbol || !formData.quantity || !formData.avgCost || !formData.currentPrice}
+                disabled={!formData.name || !formData.symbol || !parseDecimal(formData.quantity) || !parseDecimal(formData.avgCost) || !parseDecimal(formData.currentPrice)}
                 className="bg-gradient-to-r from-[#00A3FF] to-[#0066FF] hover:opacity-90 text-white disabled:opacity-50 min-h-[44px]"
               >
                 {editingId ? 'Guardar Cambios' : 'Agregar Posicion'}

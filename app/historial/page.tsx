@@ -22,8 +22,8 @@ interface TransactionFormData {
   type: Transaction['type']
   assetName: string
   symbol: string
-  shares: number
-  pricePerShare: number
+  shares: string
+  pricePerShare: string
   notes: string
 }
 
@@ -32,8 +32,8 @@ const emptyForm: TransactionFormData = {
   type: 'COMPRA',
   assetName: '',
   symbol: '',
-  shares: 0,
-  pricePerShare: 0,
+  shares: '',
+  pricePerShare: '',
   notes: '',
 }
 
@@ -227,8 +227,8 @@ export default function HistorialPage() {
       type: transaction.type,
       assetName: transaction.assetName,
       symbol: transaction.symbol,
-      shares: transaction.shares,
-      pricePerShare: transaction.pricePerShare,
+      shares: String(transaction.shares),
+      pricePerShare: String(transaction.pricePerShare),
       notes: transaction.notes || '',
     })
     setEditingId(transaction.id)
@@ -236,7 +236,9 @@ export default function HistorialPage() {
   }
 
   const handleSaveTransaction = () => {
-    if (!formData.assetName || !formData.symbol || !formData.shares) return
+    const shares = parseDecimal(formData.shares)
+    const pricePerShare = parseDecimal(formData.pricePerShare)
+    if (!formData.assetName || !formData.symbol || !shares) return
 
     if (editingId) {
       updateTransaction(editingId, {
@@ -244,9 +246,9 @@ export default function HistorialPage() {
         type: formData.type,
         assetName: formData.assetName,
         symbol: formData.symbol.toUpperCase(),
-        shares: formData.shares,
-        pricePerShare: formData.pricePerShare,
-        total: formData.shares * formData.pricePerShare,
+        shares,
+        pricePerShare,
+        total: shares * pricePerShare,
         notes: formData.notes,
       })
     } else {
@@ -255,9 +257,9 @@ export default function HistorialPage() {
         type: formData.type,
         assetName: formData.assetName,
         symbol: formData.symbol.toUpperCase(),
-        shares: formData.shares,
-        pricePerShare: formData.pricePerShare,
-        total: formData.shares * formData.pricePerShare,
+        shares,
+        pricePerShare,
+        total: shares * pricePerShare,
         notes: formData.notes,
       })
     }
@@ -367,21 +369,21 @@ export default function HistorialPage() {
                 <div>
                   <label className="block text-sm text-[#8892b0] mb-2">Cantidad *</label>
                   <input
-                    type="number"
-                    step="any"
-                    value={formData.shares || ''}
-                    onChange={(e) => setFormData({ ...formData, shares: parseDecimal(e.target.value) })}
-                    placeholder="100"
+                    type="text"
+                    inputMode="decimal"
+                    value={formData.shares}
+                    onChange={(e) => setFormData({ ...formData, shares: e.target.value })}
+                    placeholder="0.012"
                     className="w-full h-10 px-3 bg-[rgba(255,255,255,0.03)] border border-[rgba(0,163,255,0.15)] rounded-lg text-white placeholder:text-[#8892b0] focus:outline-none focus:border-[#00A3FF]"
                   />
                 </div>
                 <div>
                   <label className="block text-sm text-[#8892b0] mb-2">Precio por Accion</label>
                   <input
-                    type="number"
-                    step="0.01"
-                    value={formData.pricePerShare || ''}
-                    onChange={(e) => setFormData({ ...formData, pricePerShare: parseDecimal(e.target.value) })}
+                    type="text"
+                    inputMode="decimal"
+                    value={formData.pricePerShare}
+                    onChange={(e) => setFormData({ ...formData, pricePerShare: e.target.value })}
                     placeholder="150.00"
                     className="w-full h-10 px-3 bg-[rgba(255,255,255,0.03)] border border-[rgba(0,163,255,0.15)] rounded-lg text-white placeholder:text-[#8892b0] focus:outline-none focus:border-[#00A3FF]"
                   />
@@ -399,16 +401,16 @@ export default function HistorialPage() {
                 <div className="flex items-end">
                   <Button
                     onClick={handleSaveTransaction}
-                    disabled={!formData.assetName || !formData.symbol || !formData.shares}
+                    disabled={!formData.assetName || !formData.symbol || !parseDecimal(formData.shares)}
                     className="w-full bg-[#00FF88] hover:bg-[#00CC6A] text-[#050510] font-medium disabled:opacity-50"
                   >
                     {editingId ? 'Guardar Cambios' : 'Guardar Transaccion'}
                   </Button>
                 </div>
               </div>
-              {formData.shares > 0 && formData.pricePerShare > 0 && (
+              {parseDecimal(formData.shares) > 0 && parseDecimal(formData.pricePerShare) > 0 && (
                 <div className="text-sm text-[#8892b0]">
-                  Total: <span className="font-mono text-white">${formatNumber(formData.shares * formData.pricePerShare)}</span>
+                  Total: <span className="font-mono text-white">${formatNumber(parseDecimal(formData.shares) * parseDecimal(formData.pricePerShare))}</span>
                 </div>
               )}
             </div>
