@@ -1,11 +1,12 @@
 "use client"
 
-import { useState, useRef } from 'react'
-import { User, Building2, DollarSign, Calendar, BarChart3, Download, Upload, RotateCcw, Check, AlertTriangle, Key, ExternalLink } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { User, Building2, DollarSign, Calendar, BarChart3, Download, Upload, RotateCcw, Check, AlertTriangle, Key, CheckCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ProtectedRoute } from '@/components/branex/protected-route'
 import { useBranex } from '@/components/branex/branex-provider'
 import { cn, formatNumber, parseDecimal } from '@/lib/utils'
+import { getFinnhubApiKey } from '@/lib/finnhub'
 
 export default function ConfiguracionPage() {
   const { profile, updateProfile, exportToCSV, importFromCSV, resetData} = useBranex()
@@ -16,9 +17,9 @@ export default function ConfiguracionPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Sync local profile when data loads
-  useState(() => {
+  useEffect(() => {
     setLocalProfile(profile)
-  })
+  }, [profile])
 
   const handleProfileChange = (field: keyof typeof profile, value: string | number) => {
     setLocalProfile(prev => ({ ...prev, [field]: value }))
@@ -26,7 +27,12 @@ export default function ConfiguracionPage() {
   }
 
   const handleSaveProfile = () => {
-    updateProfile(localProfile)
+    updateProfile({
+      ...localProfile,
+      initialCapital: typeof localProfile.initialCapital === 'string'
+        ? parseDecimal(localProfile.initialCapital)
+        : localProfile.initialCapital,
+    })
     setHasChanges(false)
   }
 
@@ -180,9 +186,10 @@ export default function ConfiguracionPage() {
                   Capital Inicial Invertido
                 </label>
                 <input
-                  type="number"
-                  value={localProfile.initialCapital}
-                  onChange={(e) => handleProfileChange('initialCapital', parseDecimal(e.target.value))}
+                  type="text"
+                  inputMode="decimal"
+                  value={localProfile.initialCapital || ''}
+                  onChange={(e) => handleProfileChange('initialCapital', e.target.value)}
                   className="w-full h-10 px-3 bg-[rgba(255,255,255,0.03)] border border-[rgba(0,163,255,0.15)] rounded-lg text-white focus:outline-none focus:border-[#00A3FF]"
                 />
               </div>
@@ -235,52 +242,33 @@ export default function ConfiguracionPage() {
                 <Key className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-white">API Keys</h2>
-                <p className="text-sm text-[#8892b0]">Configura tus claves de API para datos en tiempo real</p>
+                <h2 className="text-lg font-semibold text-white">API de Datos Financieros</h2>
+                <p className="text-sm text-[#8892b0]">Conexion a datos del mercado en tiempo real</p>
               </div>
             </div>
 
-            <div className="p-4 rounded-lg border border-[rgba(0,163,255,0.15)] bg-[rgba(255,255,255,0.02)]">
-              <div className="flex items-start justify-between gap-4 mb-4">
-                <div>
-                  <h3 className="font-medium text-white mb-1">Finnhub API Key</h3>
-                  <p className="text-sm text-[#8892b0]">
-                    Necesaria para ver noticias financieras y estado del mercado en tiempo real.
-                  </p>
-                </div>
-                <a
-                  href="https://finnhub.io/register"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-sm text-[#00A3FF] hover:underline whitespace-nowrap"
-                >
-                  Obtener clave gratuita
-                  <ExternalLink className="w-3 h-3" />
-                </a>
+            <div className="p-4 rounded-lg border border-[rgba(0,255,136,0.2)] bg-[rgba(0,255,136,0.03)]">
+              <div className="flex items-center gap-3 mb-3">
+                <CheckCircle className="w-5 h-5 text-[#00FF88]" />
+                <h3 className="font-medium text-white">Finnhub API</h3>
+                <span className="px-2 py-0.5 text-xs rounded-full bg-[rgba(0,255,136,0.1)] text-[#00FF88] border border-[rgba(0,255,136,0.3)]">
+                  {getFinnhubApiKey(profile.finnhubApiKey) ? 'Activa' : 'No configurada'}
+                </span>
               </div>
-              <input
-                type="password"
-                value={localProfile.finnhubApiKey || ''}
-                onChange={(e) => handleProfileChange('finnhubApiKey', e.target.value)}
-                placeholder="Ingresa tu API key de Finnhub"
-                className="w-full h-10 px-3 bg-[rgba(255,255,255,0.03)] border border-[rgba(0,163,255,0.15)] rounded-lg text-white placeholder:text-[#8892b0] focus:outline-none focus:border-[#00A3FF] font-mono"
-              />
-              <p className="text-xs text-[#8892b0] mt-2">
-                Tu clave se guarda localmente y nunca se comparte con terceros.
+              <p className="text-sm text-[#8892b0] mb-4">
+                La API de Finnhub esta configurada a nivel de plataforma. Las noticias financieras y el estado del mercado funcionan automaticamente para todos los portafolios.
               </p>
-            </div>
-
-            {hasChanges && (
-              <div className="mt-4 flex justify-end">
-                <Button
-                  onClick={handleSaveProfile}
-                  className="bg-gradient-to-r from-[#00A3FF] to-[#0066FF] hover:opacity-90 text-white"
-                >
-                  <Check className="w-4 h-4 mr-2" />
-                  Guardar Cambios
-                </Button>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.05)]">
+                  <div className="w-2 h-2 rounded-full bg-[#00FF88]" />
+                  <span className="text-sm text-[#8892b0]">Noticias en tiempo real</span>
+                </div>
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.05)]">
+                  <div className="w-2 h-2 rounded-full bg-[#00FF88]" />
+                  <span className="text-sm text-[#8892b0]">Estado del mercado</span>
+                </div>
               </div>
-            )}
+            </div>
           </div>
 
           {/* Export/Import Section */}
