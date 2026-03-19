@@ -1,23 +1,122 @@
 "use client"
 
 import { useState, useMemo } from 'react'
-import { Cpu, Heart, Building2, ShoppingBag, Zap, Factory, Boxes, Home, Lightbulb, Radio, ChevronRight, Briefcase } from 'lucide-react'
+import {
+  Cpu, Heart, Building2, ShoppingBag, Zap, Factory, Boxes, Home, Lightbulb, Radio, ChevronRight, Briefcase,
+  Shield, Gamepad2, Link2, Bot, Monitor, Pill, FlaskConical, Stethoscope, HeartPulse,
+  Landmark, ShieldCheck, Smartphone, PiggyBank, BarChart3, ArrowLeftRight,
+  ShoppingCart, Gem, UtensilsCrossed, Store, Droplets, Flame, Sun, Wind, Atom,
+  HardHat, Plane, Truck, Cog, Wrench,
+  Mountain, Beaker, CircleDollarSign,
+  Building, Network, Tv, Megaphone, Users,
+  Car, BatteryCharging, Settings,
+  Sprout, GraduationCap, MapPin, Leaf, Bitcoin, Package, LineChart, Wallet, Tag
+} from 'lucide-react'
 import { ProtectedRoute } from '@/components/branex/protected-route'
 import { useBranex } from '@/components/branex/branex-provider'
 import { cn, formatNumber, formatCurrency } from '@/lib/utils'
 
-// Sector icon mapping
+// Sector icon mapping - covers all sectors including subsectors
 const sectorIcons: Record<string, typeof Cpu> = {
-  'Tecnologia': Cpu,
+  // Tecnología
+  'Tecnología': Cpu,
+  'Software': Monitor,
+  'Semiconductores': Cpu,
+  'Hardware': Monitor,
+  'Inteligencia Artificial': Bot,
+  'Cloud Computing': Network,
+  'Ciberseguridad': Shield,
+  'Videojuegos': Gamepad2,
+  'Blockchain': Link2,
+  'IoT': Smartphone,
+  'Robótica': Bot,
+
+  // Salud
   'Salud': Heart,
+  'Farmacéutica': Pill,
+  'Biotecnología': FlaskConical,
+  'Equipos Médicos': Stethoscope,
+  'Seguros de Salud': HeartPulse,
+  'Servicios de Salud': HeartPulse,
+
+  // Finanzas
   'Finanzas': Building2,
+  'Banca': Landmark,
+  'Seguros': ShieldCheck,
+  'Fintech': Smartphone,
+  'Gestión de Activos': PiggyBank,
+  'Servicios Financieros': BarChart3,
+  'Bolsas y Mercados': ArrowLeftRight,
+
+  // Consumo
   'Consumo': ShoppingBag,
-  'Energia': Zap,
+  'Consumo Discrecional': ShoppingCart,
+  'Consumo Básico': ShoppingBag,
+  'E-commerce': ShoppingCart,
+  'Lujo': Gem,
+  'Alimentos y Bebidas': UtensilsCrossed,
+  'Retail': Store,
+  'Restaurantes': UtensilsCrossed,
+
+  // Energía
+  'Energía': Zap,
+  'Petróleo y Gas': Flame,
+  'Energías Renovables': Zap,
+  'Energía Solar': Sun,
+  'Energía Eólica': Wind,
+  'Energía Nuclear': Atom,
+
+  // Industrial
   'Industrial': Factory,
+  'Construcción': HardHat,
+  'Aeroespacial y Defensa': Plane,
+  'Manufactura': Factory,
+  'Transporte': Truck,
+  'Logística': Truck,
+  'Maquinaria': Cog,
+  'Ingeniería': Wrench,
+
+  // Materiales
   'Materiales': Boxes,
+  'Minería': Mountain,
+  'Químicos': Beaker,
+  'Acero y Metales': Boxes,
+  'Papel y Celulosa': Boxes,
+  'Oro y Plata': CircleDollarSign,
+
+  // Inmobiliario
   'Inmobiliario': Home,
+  'REITs': Building,
+  'Desarrollo Inmobiliario': Building,
+  'Infraestructura': Building,
+
+  // Comunicaciones
   'Telecomunicaciones': Radio,
-  'Servicios Publicos': Lightbulb,
+  'Medios y Entretenimiento': Tv,
+  'Streaming': Tv,
+  'Publicidad': Megaphone,
+  'Redes Sociales': Users,
+
+  // Servicios Públicos
+  'Servicios Públicos': Lightbulb,
+  'Agua': Droplets,
+  'Gas Natural': Flame,
+  'Electricidad': Lightbulb,
+
+  // Automotriz
+  'Automotriz': Car,
+  'Vehículos Eléctricos': BatteryCharging,
+  'Autopartes': Settings,
+
+  // Otros
+  'Agricultura': Sprout,
+  'Educación': GraduationCap,
+  'Viajes y Turismo': MapPin,
+  'Cannabis': Leaf,
+  'Criptomonedas': Bitcoin,
+  'Commodities': Package,
+  'ETFs': LineChart,
+  'Fondos': Wallet,
   'Otros': Briefcase,
 }
 

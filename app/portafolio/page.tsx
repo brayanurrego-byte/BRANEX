@@ -6,26 +6,14 @@ import { Button } from '@/components/ui/button'
 import { ProtectedRoute } from '@/components/branex/protected-route'
 import { useBranex } from '@/components/branex/branex-provider'
 import { cn, parseDecimal, formatCurrency, formatQuantity, formatPercent } from '@/lib/utils'
-
-const SECTORS = [
-  'Tecnología',
-  'Salud',
-  'Finanzas',
-  'Consumo',
-  'Energía',
-  'Industrial',
-  'Materiales',
-  'Inmobiliario',
-  'Telecomunicaciones',
-  'Servicios Públicos',
-  'Otros',
-]
+import { getSectorsByCategory } from '@/lib/sectors'
 
 
 interface HoldingFormData {
   name: string
   symbol: string
   sector: string
+  customSector?: string
   quantity: string
   avgCost: string
   currentPrice: string
@@ -116,11 +104,15 @@ export default function PortafolioPage() {
     if (!quantity || !avgCost || !currentPrice) return
     if (quantity < 0 || avgCost < 0 || currentPrice < 0) return
 
+    const resolvedSector = formData.sector === '__custom__'
+      ? (formData.customSector?.trim() || 'Otros')
+      : formData.sector
+
     if (editingId) {
       updateHolding(editingId, {
         name: formData.name,
         symbol: formData.symbol.toUpperCase(),
-        sector: formData.sector,
+        sector: resolvedSector,
         quantity,
         avgCost,
         currentPrice,
@@ -131,7 +123,7 @@ export default function PortafolioPage() {
       addHolding({
         name: formData.name,
         symbol: formData.symbol.toUpperCase(),
-        sector: formData.sector,
+        sector: resolvedSector,
         quantity,
         avgCost,
         currentPrice,
@@ -512,14 +504,37 @@ export default function PortafolioPage() {
               <div>
                 <label className="block text-sm text-[#8892b0] mb-2">Sector</label>
                 <select
-                  value={formData.sector}
-                  onChange={(e) => setFormData({ ...formData, sector: e.target.value })}
+                  value={formData.sector === '__custom__' ? '__custom__' : formData.sector}
+                  onChange={(e) => {
+                    if (e.target.value === '__custom__') {
+                      setFormData({ ...formData, sector: '__custom__', customSector: '' })
+                    } else {
+                      setFormData({ ...formData, sector: e.target.value, customSector: undefined })
+                    }
+                  }}
                   className="w-full h-10 px-3 bg-[rgba(255,255,255,0.03)] border border-[rgba(0,163,255,0.15)] rounded-lg text-white focus:outline-none focus:border-[#00A3FF]"
                 >
-                  {SECTORS.map(sector => (
-                    <option key={sector} value={sector} className="bg-[#0D0D2B]">{sector}</option>
+                  {getSectorsByCategory().map(group => (
+                    <optgroup key={group.category} label={group.category} className="bg-[#0D0D2B] text-[#8892b0]">
+                      {group.sectors.map(s => (
+                        <option key={s.name} value={s.name} className="bg-[#0D0D2B] text-white">{s.name}</option>
+                      ))}
+                    </optgroup>
                   ))}
+                  <optgroup label="Personalizado" className="bg-[#0D0D2B] text-[#8892b0]">
+                    <option value="__custom__" className="bg-[#0D0D2B] text-white">Escribir sector personalizado...</option>
+                  </optgroup>
                 </select>
+                {formData.sector === '__custom__' && (
+                  <input
+                    type="text"
+                    value={formData.customSector || ''}
+                    onChange={(e) => setFormData({ ...formData, customSector: e.target.value })}
+                    placeholder="Escribe el nombre del sector"
+                    className="w-full h-10 px-3 mt-2 bg-[rgba(255,255,255,0.03)] border border-[rgba(0,163,255,0.15)] rounded-lg text-white placeholder:text-[#8892b0] focus:outline-none focus:border-[#00A3FF]"
+                    autoFocus
+                  />
+                )}
               </div>
               <div>
                 <label className="block text-sm text-[#8892b0] mb-2">Cantidad de Acciones *</label>

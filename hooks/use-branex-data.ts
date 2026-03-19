@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { parseDecimal } from '@/lib/utils'
+import { getSectorColor } from '@/lib/sectors'
 import { isSupabaseConfigured } from '@/lib/supabase'
 import {
   fetchPortfolios as fetchPortfoliosFromDB,
@@ -25,19 +26,8 @@ import type {
 
 const STORAGE_KEY = 'branex_storage'
 
-const SECTOR_COLORS: Record<string, string> = {
-  'Tecnología': '#00A3FF',
-  'Salud': '#00FF88',
-  'Finanzas': '#7B61FF',
-  'Consumo': '#FFB800',
-  'Energía': '#FF3366',
-  'Industrial': '#00D4FF',
-  'Materiales': '#FF8C00',
-  'Inmobiliario': '#9D4EDD',
-  'Telecomunicaciones': '#06D6A0',
-  'Servicios Públicos': '#EF476F',
-  'Otros': '#8892b0',
-}
+// Re-export for backwards compatibility
+import { SECTOR_COLORS } from '@/lib/sectors'
 
 // Empty default profile
 const DEFAULT_PROFILE: UserProfile = {
@@ -222,7 +212,7 @@ export function useBranexData() {
     const sectorAllocation = Object.entries(sectorMap).map(([name, value]) => ({
       name,
       value: Math.round((value / totalValue) * 100),
-      color: SECTOR_COLORS[name] || SECTOR_COLORS['Otros'],
+      color: SECTOR_COLORS[name] || getSectorColor('Otros'),
     }))
 
     // Diversification Score based on Herfindahl-Hirschman Index (HHI)
@@ -369,7 +359,7 @@ export function useBranexData() {
       const newHolding: Holding = {
         ...holding,
         id: generateId(),
-        sectorColor: SECTOR_COLORS[holding.sector] || SECTOR_COLORS['Otros'],
+        sectorColor: getSectorColor(holding.sector),
       }
       return {
         ...p,
@@ -386,7 +376,7 @@ export function useBranexData() {
         if (h.id === id) {
           const updated = { ...h, ...updates }
           if (updates.sector) {
-            updated.sectorColor = SECTOR_COLORS[updates.sector] || SECTOR_COLORS['Otros']
+            updated.sectorColor = getSectorColor(updates.sector)
           }
           return updated
         }
@@ -442,7 +432,7 @@ export function useBranexData() {
             name: transaction.assetName,
             symbol: transaction.symbol,
             sector: 'Otros',
-            sectorColor: SECTOR_COLORS['Otros'],
+            sectorColor: getSectorColor('Otros'),
             quantity: transaction.shares,
             avgCost: transaction.pricePerShare,
             currentPrice: transaction.pricePerShare,

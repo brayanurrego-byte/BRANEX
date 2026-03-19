@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { ProtectedRoute } from '@/components/branex/protected-route'
 import { useBranex } from '@/components/branex/branex-provider'
 import { cn, parseDecimal } from '@/lib/utils'
+import { getSectorsByCategory } from '@/lib/sectors'
 
 // Empty state component
 function EmptyState({ onAdd }: { onAdd: () => void }) {
@@ -293,8 +294,12 @@ export default function WatchlistPage() {
                   onChange={(e) => setFormData({ ...formData, sector: e.target.value })}
                   className="w-full h-10 px-3 bg-[rgba(255,255,255,0.03)] border border-[rgba(0,163,255,0.15)] rounded-lg text-white focus:outline-none focus:border-[#00A3FF]"
                 >
-                  {['Tecnología', 'Salud', 'Finanzas', 'Consumo', 'Energía', 'Industrial', 'Otros'].map(s => (
-                    <option key={s} value={s} className="bg-[#0D0D2B]">{s}</option>
+                  {getSectorsByCategory().map(group => (
+                    <optgroup key={group.category} label={group.category} className="bg-[#0D0D2B] text-[#8892b0]">
+                      {group.sectors.map(s => (
+                        <option key={s.name} value={s.name} className="bg-[#0D0D2B] text-white">{s.name}</option>
+                      ))}
+                    </optgroup>
                   ))}
                 </select>
               </div>
