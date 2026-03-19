@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Search, Bell, ChevronDown, Command, User, Settings, LogOut, X, Check, AlertTriangle, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -121,7 +121,7 @@ export function Navbar() {
   }
 
   // Check market status
-  useState(() => {
+  useEffect(() => {
     const checkMarketStatus = () => {
       const now = new Date()
       const nyHour = parseInt(new Intl.DateTimeFormat('en-US', {
@@ -148,7 +148,7 @@ export function Navbar() {
     checkMarketStatus()
     const interval = setInterval(checkMarketStatus, 60000) // Check every minute
     return () => clearInterval(interval)
-  })
+  }, [])
 
 
   return (

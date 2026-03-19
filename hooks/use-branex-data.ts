@@ -291,36 +291,39 @@ export function useBranexData() {
     return newPortfolio.id
   }, [loadCloudPortfolios])
 
-  // Select a portfolio (load from Supabase if not in local storage)
+  // Select a portfolio (always fetch latest from Supabase for cross-device sync)
   const selectPortfolio = useCallback(async (id: string) => {
-    // Check if we have it locally
-    const localPortfolio = storage?.portfolios.find(p => p.id === id)
+    // Always try to fetch the latest version from Supabase first
+    if (isSupabaseConfigured()) {
+      const cloudData = await fetchPortfolioData(id)
+      if (cloudData) {
+        setStorage(prev => {
+          if (!prev) return { activePortfolioId: id, portfolios: [cloudData] }
+          const exists = prev.portfolios.find(p => p.id === id)
+          if (exists) {
+            // Replace local copy with cloud version (latest data)
+            return {
+              ...prev,
+              activePortfolioId: id,
+              portfolios: prev.portfolios.map(p => p.id === id ? cloudData : p),
+            }
+          }
+          return {
+            activePortfolioId: id,
+            portfolios: [...prev.portfolios, cloudData],
+          }
+        })
+        return
+      }
+    }
 
+    // Fallback to local copy if Supabase is not available or fetch failed
+    const localPortfolio = storage?.portfolios.find(p => p.id === id)
     if (localPortfolio) {
       setStorage(prev => {
         if (!prev) return prev
         return { ...prev, activePortfolioId: id }
       })
-      return
-    }
-
-    // Load from Supabase
-    if (isSupabaseConfigured()) {
-      const portfolioData = await fetchPortfolioData(id)
-      if (portfolioData) {
-        setStorage(prev => {
-          if (!prev) return { activePortfolioId: id, portfolios: [portfolioData] }
-          // Add to local storage if not already there
-          const exists = prev.portfolios.find(p => p.id === id)
-          if (exists) {
-            return { ...prev, activePortfolioId: id }
-          }
-          return {
-            activePortfolioId: id,
-            portfolios: [...prev.portfolios, portfolioData],
-          }
-        })
-      }
     }
   }, [storage?.portfolios])
 

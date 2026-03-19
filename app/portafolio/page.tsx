@@ -114,6 +114,7 @@ export default function PortafolioPage() {
     const currentPrice = parseDecimal(formData.currentPrice)
 
     if (!quantity || !avgCost || !currentPrice) return
+    if (quantity < 0 || avgCost < 0 || currentPrice < 0) return
 
     if (editingId) {
       updateHolding(editingId, {

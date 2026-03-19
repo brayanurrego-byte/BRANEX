@@ -89,7 +89,7 @@ export function formatDollar(num: number): string {
 export function formatQuantity(num: number): string {
   if (num === 0) return '0'
   // For whole numbers, show no decimals
-  if (Number.isInteger(num)) return num.toLocaleString('es-ES')
+  if (Number.isInteger(num)) return num.toString()
   // For fractional, show up to 8 decimal places removing trailing zeros
   const formatted = num.toFixed(8).replace(/\.?0+$/, '')
   return formatted || '0'

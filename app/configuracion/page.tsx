@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { User, Building2, DollarSign, Calendar, BarChart3, Download, Upload, RotateCcw, Check, AlertTriangle, Key, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ProtectedRoute } from '@/components/branex/protected-route'
@@ -16,9 +16,9 @@ export default function ConfiguracionPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Sync local profile when data loads
-  useState(() => {
+  useEffect(() => {
     setLocalProfile(profile)
-  })
+  }, [profile])
 
   const handleProfileChange = (field: keyof typeof profile, value: string | number) => {
     setLocalProfile(prev => ({ ...prev, [field]: value }))

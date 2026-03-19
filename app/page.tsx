@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Briefcase, Calendar, TrendingUp, X, ArrowRight, Lock, Cloud, Eye, EyeOff, Shield, Trash2 } from 'lucide-react'
+import { Plus, Briefcase, Calendar, TrendingUp, X, ArrowRight, Lock, Cloud, Eye, EyeOff, Shield, Trash2, RefreshCw } from 'lucide-react'
 import { ParticleBackground } from '@/components/branex/particle-background'
 import { useBranex } from '@/components/branex/branex-provider'
 import { Button } from '@/components/ui/button'
@@ -39,13 +39,23 @@ export default function PortfolioSelectionPage() {
   const [pendingPortfolioId, setPendingPortfolioId] = useState<string | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
   const [showPasswordCreate, setShowPasswordCreate] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null)
   const supabaseActive = isSupabaseConfigured()
 
   useEffect(() => {
     if (supabaseActive && isLoaded) {
-      loadCloudPortfolios()
+      loadCloudPortfolios().then(() => setLastSyncTime(new Date()))
     }
   }, [supabaseActive, isLoaded, loadCloudPortfolios])
+
+  const handleRefreshCloud = async () => {
+    if (isRefreshing) return
+    setIsRefreshing(true)
+    await loadCloudPortfolios()
+    setLastSyncTime(new Date())
+    setIsRefreshing(false)
+  }
 
   const handleCreatePortfolio = async () => {
     if (!newPortfolioName.trim()) return
@@ -203,12 +213,30 @@ export default function PortfolioSelectionPage() {
             : 'Comienza creando tu primer portafolio de inversiones.'
           }
         </p>
+        {supabaseActive && hasPortfolios && (
+          <p className="text-xs text-[#8892b0]/60 mt-1">
+            Tus portafolios se sincronizan en la nube y puedes acceder desde cualquier dispositivo.
+          </p>
+        )}
         {supabaseActive && (
-          <div className="flex items-center justify-center gap-2 mt-2">
+          <div className="flex items-center justify-center gap-2 mt-3">
             <Cloud className="w-3 h-3 text-[#00FF88]" />
             <span className="text-xs text-[#00FF88]">
               {isSyncing ? 'Sincronizando...' : 'Conectado a la nube'}
             </span>
+            {lastSyncTime && !isSyncing && (
+              <span className="text-xs text-[#8892b0]">
+                · {lastSyncTime.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            )}
+            <button
+              onClick={handleRefreshCloud}
+              disabled={isRefreshing}
+              className="p-1 text-[#8892b0] hover:text-[#00FF88] transition-colors disabled:opacity-50"
+              title="Actualizar desde la nube"
+            >
+              <RefreshCw className={cn("w-3 h-3", isRefreshing && "animate-spin")} />
+            </button>
           </div>
         )}
       </div>
